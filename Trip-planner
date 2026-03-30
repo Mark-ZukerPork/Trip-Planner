@@ -33,21 +33,9 @@ const initialData = {
             { id: 'a2', time: "12:30", type: "Food", title: "一蘭拉麵", cost: 1500, note: "排隊約30分鐘" }
           ]
         },
-        {
-          day: 2,
-          date: "2026-03-26",
-          activities: []
-        },
-        {
-          day: 3,
-          date: "2026-03-27",
-          activities: []
-        },
-        {
-          day: 4,
-          date: "2026-03-28",
-          activities: []
-        }
+        { day: 2, date: "2026-03-26", activities: [] },
+        { day: 3, date: "2026-03-27", activities: [] },
+        { day: 4, date: "2026-03-28", activities: [] }
       ],
       budget: { total: 200000, spent: 1500 },
       checklist: [
@@ -83,14 +71,19 @@ const TypeColor = (type) => {
 };
 
 // ==========================================
-// 3. 主應用程式 (Main App)
+// 3. 主應用程式 (Main App Component)
 // ==========================================
 
 export default function App() {
   const [data, setData] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(APP_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : initialData;
+      try {
+        const saved = localStorage.getItem(APP_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : initialData;
+      } catch (e) {
+        console.error("LocalStorage error:", e);
+        return initialData;
+      }
     }
     return initialData;
   });
@@ -132,7 +125,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-[#2D3436] font-sans">
+    <div className="min-h-screen bg-[#FDFDFD] text-[#2D3436] font-sans selection:bg-[#BC002D]/10">
       
       {/* 頂部 Header */}
       <header className="sticky top-0 z-[60] bg-white/80 backdrop-blur-md border-b border-zinc-100 px-6 py-4">
@@ -150,7 +143,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 選單與彈窗 */}
+      {/* 選單與彈窗遮罩 */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div 
@@ -168,7 +161,7 @@ export default function App() {
           >
             <nav className="space-y-6">
               <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.3em] mb-4">主選單</p>
-              <button onClick={() => { setCurrentView('home'); setIsMenuOpen(false); }} className="flex items-center gap-4 w-full text-left py-3 border-b border-zinc-50 hover:text-[#BC002D]">
+              <button onClick={() => { setCurrentView('home'); setIsMenuOpen(false); }} className="flex items-center gap-4 w-full text-left py-3 border-b border-zinc-50 hover:text-[#BC002D] transition-colors">
                 <Home className="h-5 w-5" /> <span className="font-bold">我的旅程</span>
               </button>
             </nav>
@@ -192,7 +185,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 底部導航欄 */}
+      {/* 底部行動端導航 */}
       <div className="fixed bottom-6 left-6 right-6 md:hidden z-40">
         <div className="bg-[#2D3436] rounded-[2rem] p-2 flex items-center justify-around shadow-2xl shadow-black/20">
           <button onClick={() => setCurrentView('home')} className={`p-3 rounded-2xl ${currentView === 'home' ? 'bg-white text-[#BC002D]' : 'text-white/40'}`}>
@@ -224,7 +217,7 @@ export default function App() {
   );
 }
 
-// --- 首頁儀表板 ---
+// --- 首頁組件 ---
 function HomeDashboard({ trips, onNavigate, onCreateOpen }) {
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 pb-32">
@@ -244,7 +237,7 @@ function HomeDashboard({ trips, onNavigate, onCreateOpen }) {
               onClick={() => onNavigate(trip.id)}
             >
               <div className="relative h-48">
-                <img src={trip.coverImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800'} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" />
+                <img src={trip.coverImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800'} alt={trip.title} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-6 left-6 text-white">
                   <h3 className="text-xl font-bold mb-1">{trip.title}</h3>
@@ -277,7 +270,7 @@ function HomeDashboard({ trips, onNavigate, onCreateOpen }) {
   );
 }
 
-// --- 詳細行程頁 ---
+// --- 詳細行程頁組件 ---
 function TripDetail({ trip, onBack, onUpdate }) {
   const [activeDay, setActiveDay] = useState(1);
   const [detailTab, setDetailTab] = useState('plan');
@@ -286,7 +279,6 @@ function TripDetail({ trip, onBack, onUpdate }) {
 
   if (!trip) return null;
 
-  // 核心修復：確保當 activeDay 改變時，對應的日期資訊也隨之更新
   const currentDayData = trip.dailyItinerary.find(d => d.day === activeDay) || { day: activeDay, date: '', activities: [] };
 
   const handleSaveActivity = (activity) => {
@@ -354,7 +346,7 @@ function TripDetail({ trip, onBack, onUpdate }) {
             { id: 'budget', label: '費用', icon: CreditCard },
             { id: 'tools', label: '清單', icon: Luggage }
           ].map(t => (
-            <button key={t.id} onClick={() => setDetailTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-sm shrink-0 ${detailTab === t.id ? 'bg-[#BC002D] text-white' : 'text-zinc-400'}`}>
+            <button key={t.id} onClick={() => setDetailTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-sm shrink-0 transition-colors ${detailTab === t.id ? 'bg-[#BC002D] text-white' : 'text-zinc-400 hover:text-zinc-600'}`}>
               <t.icon className="h-4 w-4" /> {t.label}
             </button>
           ))}
@@ -364,12 +356,12 @@ function TripDetail({ trip, onBack, onUpdate }) {
       <div className="max-w-6xl mx-auto px-6 py-10">
         {detailTab === 'plan' && (
           <div className="grid lg:grid-cols-[120px_1fr] gap-10">
-            <div className="flex lg:flex-col gap-3 overflow-x-auto no-scrollbar">
+            <div className="flex lg:flex-col gap-3 overflow-x-auto no-scrollbar pb-2 lg:pb-0">
               {trip.dailyItinerary.map((dayData) => (
                 <button 
                   key={dayData.day} 
                   onClick={() => setActiveDay(dayData.day)} 
-                  className={`w-16 h-16 lg:w-full lg:h-auto lg:py-4 rounded-3xl flex flex-col items-center justify-center border shrink-0 transition-all ${activeDay === dayData.day ? 'bg-[#2D3436] text-white shadow-lg' : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-300'}`}
+                  className={`w-16 h-16 lg:w-full lg:h-auto lg:py-4 rounded-3xl flex flex-col items-center justify-center border shrink-0 transition-all ${activeDay === dayData.day ? 'bg-[#2D3436] text-white shadow-lg border-[#2D3436]' : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-300'}`}
                 >
                   <span className="text-[10px] font-black">DAY</span>
                   <span className="text-xl font-black">{dayData.day}</span>
@@ -390,8 +382,7 @@ function TripDetail({ trip, onBack, onUpdate }) {
               {currentDayData.activities.length > 0 ? (
                 currentDayData.activities.map((act) => (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     key={act.id} 
                     className="flex gap-4 items-start bg-white p-6 rounded-[2rem] border border-zinc-50 shadow-sm group hover:shadow-md transition-shadow"
                   >
@@ -411,7 +402,7 @@ function TripDetail({ trip, onBack, onUpdate }) {
                           <MapPin className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      {act.note && <p className="text-sm text-zinc-400 mt-1 line-clamp-2">{act.note}</p>}
+                      {act.note && <p className="text-sm text-zinc-400 mt-1 line-clamp-2 font-medium">{act.note}</p>}
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
@@ -460,7 +451,11 @@ function TripDetail({ trip, onBack, onUpdate }) {
              </div>
           </div>
         )}
-        {detailTab === 'tools' && <div className="p-10 text-center text-zinc-300 font-bold bg-white rounded-[3rem] border border-zinc-100">清單功能即將推出</div>}
+        {detailTab === 'tools' && (
+          <div className="p-10 text-center text-zinc-300 font-bold bg-white rounded-[3rem] border border-zinc-100">
+            清單功能即將推出
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -477,7 +472,7 @@ function TripDetail({ trip, onBack, onUpdate }) {
   );
 }
 
-// --- 活動彈窗 ---
+// --- 表單組件 ---
 function ActivityModal({ initialData, onClose, onSubmit }) {
   const [form, setForm] = useState(initialData || {
     time: '10:00',
@@ -565,14 +560,8 @@ function ActivityModal({ initialData, onClose, onSubmit }) {
   );
 }
 
-// --- 新增旅程彈窗 ---
 function CreateTripModal({ isOpen, onClose, onSubmit }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    startDate: '',
-    endDate: '',
-    coverImage: ''
-  });
+  const [formData, setFormData] = useState({ title: '', startDate: '', endDate: '', coverImage: '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -582,9 +571,8 @@ function CreateTripModal({ isOpen, onClose, onSubmit }) {
     const end = new Date(formData.endDate + "T00:00:00");
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    const actualDays = diffDays > 0 ? diffDays : 1;
+    const actualDays = Math.max(1, diffDays);
 
-    // 自動生成每日行程結構
     const dailyItinerary = Array.from({ length: actualDays }).map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
@@ -595,7 +583,7 @@ function CreateTripModal({ isOpen, onClose, onSubmit }) {
       };
     });
 
-    const newTrip = {
+    onSubmit({
       id: crypto.randomUUID(),
       title: formData.title,
       startDate: formData.startDate,
@@ -605,9 +593,7 @@ function CreateTripModal({ isOpen, onClose, onSubmit }) {
       dailyItinerary,
       budget: { total: 50000, spent: 0 },
       checklist: []
-    };
-
-    onSubmit(newTrip);
+    });
     setFormData({ title: '', startDate: '', endDate: '', coverImage: '' });
   };
 
@@ -648,6 +634,15 @@ function CreateTripModal({ isOpen, onClose, onSubmit }) {
                 value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-300 uppercase tracking-widest ml-4">封面圖片網址 (選填)</label>
+            <input 
+              className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none font-bold"
+              placeholder="https://images.unsplash.com/..."
+              value={formData.coverImage} onChange={e => setFormData({...formData, coverImage: e.target.value})}
+            />
           </div>
 
           <button type="submit" className="w-full bg-[#BC002D] text-white py-5 rounded-[2rem] font-black text-lg shadow-xl shadow-[#BC002D]/20 hover:bg-[#A00026] active:scale-95 transition-all">
